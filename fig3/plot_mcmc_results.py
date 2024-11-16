@@ -57,6 +57,7 @@ def plot_posterior_comparison(sim_df, df, color, name):
     plt.xticks(rotation=45)
     plt.ylabel("Change in dF/F")
     plt.savefig("posterior_comparison_{}.pdf".format(name), bbox_inches='tight')
+    
 
 
 def plot_data(df):
@@ -79,7 +80,7 @@ def plot_data(df):
     plt.savefig("data.pdf", bbox_inches='tight')
 
 # get experimental data
-excel_file = "data.xlsx" # change path to the location of your file
+excel_file = "exp1_data.xlsx" # change path to the location of your file
 df = pd.read_excel(excel_file)
 
 depletiontimes = [0.4, 4.0, 40.0]
@@ -89,8 +90,11 @@ conditions = [(depletiontime, pausetime) for pausetime in pausetimes for depleti
 
 # load traces
 trace = az.from_netcdf("trace.nc")
+trace = trace.sel(chain=[0,1,2,3])
 trace_single = az.from_netcdf("trace_single.nc")
+trace_single = trace_single.sel(chain=[1,3])
 trace_tt = az.from_netcdf("trace_tt.nc")
+trace_tt = trace_tt.sel(chain=[2,3])
 
 # get the posterior
 sim_df = get_posterior_samples(trace)

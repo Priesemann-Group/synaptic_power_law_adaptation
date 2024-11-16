@@ -206,7 +206,7 @@ function get_released_vesicles_at_test_times(n_released, ts, test_times, spikes)
 end
 
 function get_vesicle_release_times(n_released, ts, max_releases)
-    vesicle_release_times = zeros(max_releases)
+    vesicle_release_times = -ones(max_releases)
 
     ind = 1
     for i in 2:length(ts)
@@ -219,14 +219,29 @@ function get_vesicle_release_times(n_released, ts, max_releases)
     return vesicle_release_times
 end
 
-function get_vesicle_releases_at_spikes(n_released, ts, spikes)::Array{Bool}
+""" same as get_vesicle_release_times but inserts multiple times for multi-releases """
+function get_multiple_vesicle_release_times(n_released, ts, max_releases)
+    vesicle_release_times = -ones(max_releases)
+
+    ind = 1
+    for i in 2:length(ts)
+        for j in 1:n_released[i]-n_released[i-1]
+            vesicle_release_times[ind] = ts[i]
+            ind += 1
+        end
+    end
+
+    return vesicle_release_times
+end
+
+function get_vesicle_releases_at_spikes(n_released, ts, spikes)::Array{Int}
     vesicle_releases = zeros(length(spikes))
 
     n_released_last_t = n_released[1]
 
     for i in 1:length(spikes)
         n_released_t = n_released[ts.==spikes[i]][1]
-        vesicle_releases[i] = n_released_t - n_released_last_t > 0
+        vesicle_releases[i] = n_released_t - n_released_last_t
         n_released_last_t = n_released_t
     end
 
@@ -247,4 +262,30 @@ function insert_spikes!(train, index, spikes)
     for i in 1:min(max_spikes, n_spikes)
         train[index, i] = spikes[i]
     end
+end
+
+
+function convert_timebased_binbased(inputs, input_ts, bin_size, max_time)
+    n_bins = Int(max_time / bin_size)
+    ts = collect(range(0.0, stop=max_time + bin_size, length=n_bins + 1))
+    bin_inputs = zeros(n_bins)
+    for j in 1:n_bins
+        inds = (input_ts .>= ts[j]) .& (input_ts .< ts[j+1])
+        if sum(inds) == 0
+            bin_inputs[j] = inputs[input_ts.<ts[j+1]][end]
+        else
+            bin_inputs[j] = mean(inputs[inds])
+        end
+    end
+    return bin_inputs
+end
+
+function convert_timebased_binbased_spikes(spikes, bin_size, max_time)
+    n_bins = Int(max_time / bin_size)
+    ts = collect(range(0.0, stop=max_time + bin_size, length=n_bins + 1))
+    bin_spikes = zeros(n_bins)
+    for j in 1:n_bins
+        bin_spikes[j] = sum((spikes .>= ts[j]) .& (spikes .< ts[j+1]))
+    end
+    return bin_spikes
 end
