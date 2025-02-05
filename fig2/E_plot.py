@@ -119,11 +119,34 @@ except:
 t, b, m, m2 = popt
 
 print("truncated power law fit")
-print("t={:.1f}, b={:.1f}, m={:.1f}, m2={:.1f}".format(*popt))
+print("t={:.2f}, b={:.2f}, m={:.2f}, m2={:.2f}".format(*popt))
 print("kappa(dt) ~ dt^{:.1f} if dt < {:.1f}".format(m,np.exp(t)))
 print("kappa(dt) ~ dt^{:.1f} if dt >= {:.1f}".format(m2,np.exp(t)))
 
 p = lambda x: np.exp(p_log(np.log(x)))
+
+
+# fit kernel with double exponential
+
+def log_double_exponential(x, a, b, c, d):
+    return np.log(a*np.exp(-x/b) + c*np.exp(-x/d))
+
+# Define initial guesses for parameters
+p0_double_exponential = [0.1, 0.01, 0.01, 1.0]
+
+# Fit model
+try:
+    popt_double_exponential, pcov = curve_fit(log_double_exponential, x, y_log, p0=p0_double_exponential)
+except:
+    print("full model double exponential fit failed")
+    popt_double_exponential = p0_double_exponential
+
+a, tau1, b, tau2 = popt
+
+print("double exponential fit")
+print("a={:.2f}, tau1={:.2f}, b={:.2f}, tau2={:.2f}".format(*popt_double_exponential))
+
+p_double_exponential = lambda x: np.exp(log_double_exponential(x, *popt_double_exponential))
 
 
 
@@ -201,230 +224,42 @@ def log_likelihood(y, y_pred):
 
 n = len(y)
 k = len(p0)
-L = log_likelihood(y, p(x))
+L = log_likelihood(np.log(y), np.log(p(x)))
 AIC_truncated_power_law = AIC(k, L)
 BIC_truncated_power_law = BIC(k, L, n)
 
+k = len(p0_double_exponential)
+L = log_likelihood(np.log(y), np.log(p_double_exponential(x)))
+AIC_double_exponential = AIC(k, L)
+BIC_double_exponential = BIC(k, L, n)
+
 k = len(p0_lognormal)
-L = log_likelihood(y, p_lognormal(x))
+L = log_likelihood(np.log(y), np.log(p_lognormal(x)))
 AIC_lognormal = AIC(k, L)
 BIC_lognormal = BIC(k, L, n)
 
 k = len(p0_exponential)
-L = log_likelihood(y, p_exponential(x))
+L = log_likelihood(np.log(y), np.log(p_exponential(x)))
 AIC_exponential = AIC(k, L)
 BIC_exponential = BIC(k, L, n)
 
 k = len(p0_stretched_exponential)
-L = log_likelihood(y, p_stretched_exponential(x))
+L = log_likelihood(np.log(y), np.log(p_stretched_exponential(x)))
 AIC_stretched_exponential = AIC(k, L)
 BIC_stretched_exponential = BIC(k, L, n)
 
 print("AIC")
 print("truncated power law: {:.1f}".format(AIC_truncated_power_law))
+print("double exponential: {:.1f}".format(AIC_double_exponential))
 print("lognormal: {:.1f}".format(AIC_lognormal))
 print("exponential: {:.1f}".format(AIC_exponential))
 print("stretched exponential: {:.1f}".format(AIC_stretched_exponential))
 
 print("BIC")
 print("truncated power law: {:.1f}".format(BIC_truncated_power_law))
+print("double exponential: {:.1f}".format(BIC_double_exponential))
 print("lognormal: {:.1f}".format(BIC_lognormal))
 print("exponential: {:.1f}".format(BIC_exponential))
 print("stretched exponential: {:.1f}".format(BIC_stretched_exponential))
-
-
-
-
-
-# fit single kernel with truncated power law
-
-x_single = timebins_single[cutoff_ind1:cutoff_ind2single]
-y_single = -kappas_single[cutoff_ind1:cutoff_ind2single,best_step]
-
-x_log_single = np.log(x_single)
-y_log_single = np.log(y_single)
-
-
-# fit kernel with truncated power law
-p0 = [1, 0, -1, -3]
-
-try:
-    popt_single, pcov_single = curve_fit(piecewise_linear, x_log_single, y_log_single, p0=p0)
-except:
-    print("single ts model piecewise linear fit failed")
-    popt_single = p0
-t, b, m, m2 = popt_single
-
-print("truncated power law fit single")
-print("t={:.1f}, b={:.1f}, m={:.1f}, m2={:.1f}".format(*popt_single))
-
-p_single = lambda x: np.exp(piecewise_linear(np.log(x), *popt_single))
-
-
-# fit lognormal kernel
-
-try:
-    popt_lognormal_single, pcov_lognormal_single = curve_fit(log_lognormal, x_log_single, y_log_single, p0=p0_lognormal)
-except:
-    print("single ts model lognormal fit failed")
-    popt_lognormal_single = p0_lognormal
-a, b, c = popt_lognormal_single
-
-print("lognormal fit single")
-print("a={:.1f}, b={:.1f}, c={:.1f}".format(*popt_lognormal_single))
-
-p_lognormal_single = lambda x: np.exp(log_lognormal(np.log(x), *popt_lognormal_single))
-
-
-# fit exponential kernel
-def exponential(x, a, b):
-    return a*np.exp(-b*x)
-
-try:
-    popt_exponential_single, pcov_exponential_single = curve_fit(exponential, x_single, y_single, p0=p0_exponential)
-except:
-    print("single ts model exponential fit failed")
-    popt_exponential_single = p0_exponential
-a, b = popt_exponential_single
-
-print("exponential fit single")
-print("a={:.1f}, b={:.3f}".format(*popt_exponential_single))
-
-p_exponential_single = lambda x: exponential(x, *popt_exponential_single)
-
-
-# fit stretched exponential kernel
-
-try:
-    popt_stretched_exponential_single, pcov_stretched_exponential_single = curve_fit(log_stretched_exponential, x_single, y_log_single, p0=p0_stretched_exponential)
-except:
-    print("single ts model str. exponential fit failed")
-    popt_stretched_exponential_single = p0_stretched_exponential
-a, b, c = popt_stretched_exponential_single
-
-print("stretched exponential fit single")
-print("a={:.1f}, b={:.1f}, c={:.1f}".format(*popt_stretched_exponential_single))
-
-p_stretched_exponential_single = lambda x: np.exp(log_stretched_exponential(x, *popt_stretched_exponential_single))
-
-
-# compute AIC and BIC
-
-n = len(y2)
-k = len(p0)
-L = log_likelihood(y2, p_single(x))
-AIC_truncated_power_law_single = AIC(k, L)
-BIC_truncated_power_law_single = BIC(k, L, n)
-
-k = len(p0_lognormal)
-L = log_likelihood(y2, p_lognormal_single(x))
-AIC_lognormal_single = AIC(k, L)
-BIC_lognormal_single = BIC(k, L, n)
-
-k = len(p0_exponential)
-L = log_likelihood(y2, p_exponential_single(x))
-AIC_exponential_single = AIC(k, L)
-BIC_exponential_single = BIC(k, L, n)
-
-k = len(p0_stretched_exponential)
-L = log_likelihood(y2, p_stretched_exponential_single(x))
-AIC_stretched_exponential_single = AIC(k, L)
-BIC_stretched_exponential_single = BIC(k, L, n)
-
-print("AIC single")
-print("truncated power law: {:.1f}".format(AIC_truncated_power_law_single))
-print("lognormal: {:.1f}".format(AIC_lognormal_single))
-print("exponential: {:.1f}".format(AIC_exponential_single))
-print("stretched exponential: {:.1f}".format(AIC_stretched_exponential_single))
-
-print("BIC single")
-print("truncated power law: {:.1f}".format(BIC_truncated_power_law_single))
-print("lognormal: {:.1f}".format(BIC_lognormal_single))
-print("exponential: {:.1f}".format(BIC_exponential_single))
-print("stretched exponential: {:.1f}".format(BIC_stretched_exponential_single))
-
-
-
-
-# Plot the data with the best-fit model
-fig, ax = plt.subplots(1, 1, figsize=(2.1,1.6))#, sharey=True)
-# ax.plot(x[:cutoff_ind2single], y2[:cutoff_ind2single], color='gray', label='kernel single')
-ax.plot(x, y, color='red', label='kernel')
-t, b, m, m2 = popt
-ax.plot(x, p(x), color='black', linestyle='--', linewidth=0.5, label=r'${:.1f}x^{{ {:.1f} }}$'.format(np.exp(b),m))
-ax.plot(x, p_lognormal(x), color='blue', linestyle='--', linewidth=0.5, label=r'${:.1f} \exp(-0.5 \left(\frac{{\log(x) - {:.1f}}}{{ {:.1f} }}\right)^2)$'.format(*popt_lognormal))
-ax.plot(x, p_stretched_exponential(x), color='orange', linestyle='--', linewidth=0.5, label=r'${:.1f} \exp(-{:.1f} x^{{{:.1f}}})$'.format(*popt_stretched_exponential))
-# doesn't fit well
-# ax.plot(x, p_exponential(x), color='green', linestyle='--', linewidth=0.5, label=r'${:.1f} \exp(-{:.2f} x)$'.format(*popt_exponential))
-ax.set_ylabel(r'$\kappa (\Delta t)$')
-ax.set_xlabel(r'$\Delta t$ [s]')
-ax.set_yscale('log')
-ax.set_xscale('log')
-ax.set_ylim([5e-3, 10e-1])
-ax.spines["top"].set_visible(False)
-ax.spines["right"].set_visible(False)
-# ticks at all powers of 10
-ax.set_xticks([0.1,1, 10, 100])
-mticker = plt.matplotlib.ticker
-ax.xaxis.set_minor_locator(mticker.LogLocator(numticks=999, subs="auto"))
-ax.legend(frameon=False)
-
-axsins = ax.inset_axes([0.1, 0.65, 0.4, 0.4])
-axsins.plot(x-5, 0*x, color='black', linestyle='-', linewidth=0.2)
-axsins.plot(x, y2, color='gray', label='kernel single')
-axsins.plot(x, y, color='red', label='kernel')
-axsins.plot(x, p(x), color='black', linestyle='--', linewidth=0.5, label=r'${:.1f} * x^{{{:.1f}}} {:.2f}$'.format(*popt))
-axsins.set_xlim([-5, 80])
-axsins.set_ylim([-0.05, 0.25])
-axsins.spines["top"].set_visible(False)
-axsins.spines["right"].set_visible(False)
-# remove ticks
-axsins.set_xticks([])
-axsins.set_yticks([])
-
-plt.tight_layout()
-plt.savefig("model_kernel_fit.pdf")
-
-
-# Plot the data with the best-fit model
-fig, ax = plt.subplots(1, 1, figsize=(2.1,1.6))#, sharey=True)
-ax.plot(x_single[:cutoff_ind2single], y_single[:cutoff_ind2single], color='gray', label='kernel single')
-ax.plot(x_single, y_single, color='red', label='kernel')
-ax.plot(x_single, p_single(x_single), color='black', linestyle='--', linewidth=0.5, label=r'${:.1f}x^{{ {:.1f} }}$'.format(b,m))
-ax.plot(x_single, p_lognormal_single(x_single), color='blue', linestyle='--', linewidth=0.5, label=r'${:.1f} \exp(-0.5 \left(\frac{{\log(x) - {:.1f}}}{{ {:.1f} }}\right)^2)$'.format(*popt_lognormal_single))
-ax.plot(x_single, p_exponential_single(x_single), color='green', linestyle='--', linewidth=0.5, label=r'${:.1f} \exp(-{:.2f} x)$'.format(*popt_exponential_single))
-ax.plot(x_single, p_stretched_exponential_single(x_single), color='orange', linestyle='--', linewidth=0.5, label=r'${:.1f} \exp(-{:.1f} x^{{{:.1f}}})$'.format(*popt_stretched_exponential_single))
-ax.set_ylabel(r'$\kappa (\Delta t)$')
-ax.set_xlabel(r'$\Delta t$ [s]')
-ax.set_yscale('log')
-ax.set_xscale('log')
-ax.set_ylim([5e-3, 10e-1])
-ax.spines["top"].set_visible(False)
-ax.spines["right"].set_visible(False)
-# ticks at all powers of 10
-ax.set_xticks([0.1,1, 10, 100])
-mticker = plt.matplotlib.ticker
-ax.xaxis.set_minor_locator(mticker.LogLocator(numticks=999, subs="auto"))
-ax.legend(frameon=False)
-
-plt.tight_layout()
-plt.savefig("model_kernel_fit_single.pdf")
-
-
-# fig, axs = plt.subplots(1, 1, figsize=(1*2.1,1.6))#, sharey=True)
-
-# kappa = - np.hstack([kappas[1,-1],kappas[:,-1],0])
-# timebins = np.hstack([0, timebins, timebins[-1]])
-
-# axs.plot(timebins, kappa, color='black')
-# axs.set_ylabel(r'$\kappa (\Delta t)$')
-# axs.set_xlabel(r'$\Delta t$ [s]')
-# axs.set_yscale('log')
-# axs.set_xscale('log')
-# axs.spines["top"].set_visible(False)
-# axs.spines["right"].set_visible(False)
-
-# plt.tight_layout()
-# plt.savefig("../out/plots/model_kernel.pdf")
 
 

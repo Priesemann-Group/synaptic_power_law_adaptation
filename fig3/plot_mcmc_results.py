@@ -92,9 +92,9 @@ conditions = [(depletiontime, pausetime) for pausetime in pausetimes for depleti
 trace = az.from_netcdf("trace.nc")
 trace = trace.sel(chain=[0,1,2,3])
 trace_single = az.from_netcdf("trace_single.nc")
-trace_single = trace_single.sel(chain=[1,3])
+trace_single = trace_single.sel(chain=[0,1])
 trace_tt = az.from_netcdf("trace_tt.nc")
-trace_tt = trace_tt.sel(chain=[2,3])
+# trace_tt = trace_tt.sel(chain=[1,2])
 
 # get the posterior
 sim_df = get_posterior_samples(trace)
